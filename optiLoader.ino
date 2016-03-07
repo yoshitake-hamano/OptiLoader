@@ -94,6 +94,8 @@ char Arduino_preprocessor_hint;
 #define MOSI 11
 #define RESET 10
 #define POWER 9
+#define WRITE_OK 8
+#define WRITING 7
 
 // STK Definitions; we can still use these as return codes
 #define STK_OK 0x10
@@ -143,13 +145,20 @@ const image_t *target_flashptr; 	       /* pointer to target info in flash */
 uint8_t target_code[512];	       /* The whole code */
 
 void setup (void) {
+  pinMode(WRITING, OUTPUT);
+  digitalWrite(WRITING, LOW);
+  
   Serial.begin(19200); 			/* Initialize serial for status msgs */
+  pinMode(WRITE_OK, OUTPUT);
+  digitalWrite(WRITE_OK, LOW);
   pinMode(13, OUTPUT); 			/* Blink the pin13 LED a few times */
   pulse(13,20);
 }
 
 void loop (void) {
   fp("\nOptiLoader Bootstrap programmer.\n2011 by Bill Westfield (WestfW)\n\n");
+  digitalWrite(WRITING, HIGH);
+  digitalWrite(WRITE_OK, LOW);
   if (target_poweron()) {		/* Turn on target power */
     do {
       if (!target_identify()) 		/* Figure out what kind of CPU */
@@ -161,6 +170,8 @@ void loop (void) {
       if (!target_program()) 		/* Program the image */
         break;
       (void) target_normfuses(); 	/* reset fuses to normal mode */
+      digitalWrite(WRITING, LOW);
+      digitalWrite(WRITE_OK, HIGH);
     } 
     while (0);
   } 
@@ -169,6 +180,7 @@ void loop (void) {
   }
   target_poweroff(); 			/* turn power off */
 
+  digitalWrite(WRITING, LOW);
   fp ("\nType 'G' or hit RESET for next chip\n")
     while (1) {
       if (Serial.read() == 'G')
